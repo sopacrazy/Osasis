@@ -24,7 +24,8 @@ export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
 const SIDES: DieSides[] = [4, 6, 8, 10, 12, 20, 100];
 
 const TAG = /\[\[\s*ROLAGEM\s*\|([^\]]*)\]\]/i;
-const TAG_ALL = /\[\[\s*ROLAGEM\s*\|[^\]]*\]\]/gi;
+const TAG_ALL = /\[\[\s*(?:ROLAGEM\s*\|[^\]]*|FICHA\s*)\]\]/gi;
+const SHEET_TAG = /\[\[\s*FICHA\s*\]\]/i;
 const TAG_PARTIAL_AT_END = /\[\[[^\]]*$/;
 
 const norm = (s: string) =>
@@ -69,6 +70,9 @@ export function parseRollRequest(text: string): RollRequest | null {
 export function stripRollTags(text: string): string {
   return text.replace(TAG_ALL, '').replace(TAG_PARTIAL_AT_END, '').replace(/\n{3,}/g, '\n\n').trimEnd();
 }
+
+/** O Mestre pediu a ficha de personagem (a interface mostra um formulário). */
+export const hasSheetRequest = (text: string): boolean => SHEET_TAG.test(text);
 
 export interface PendingRoll {
   messageId: string;

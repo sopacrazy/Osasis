@@ -57,6 +57,19 @@ function getGeminiClient(): GoogleGenAI {
 
 // ---- Gemini: modelo e nível de raciocínio configuráveis ------------------
 // GEMINI_THINKING: MINIMAL | LOW | MEDIUM | HIGH. Mais baixo = a narração começa mais rápido.
+/** O plano gratuito devolve 503 (alta demanda) em picos curtos: tenta de novo algumas vezes. */
+async function retryUnavailable<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const m = e instanceof Error ? e.message : '';
+      if (i >= attempts || !(m.includes('503') || m.includes('UNAVAILABLE'))) throw e;
+      await new Promise((r) => setTimeout(r, 1500 * i));
+    }
+  }
+}
+
 const GEMINI_MODEL = () => process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
 const GEMINI_THINKING = () => {
   const v = (process.env.GEMINI_THINKING || 'LOW').toUpperCase() as keyof typeof ThinkingLevel;
@@ -393,6 +406,138 @@ ${transcript}`;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao atualizar guia.';
     res.status(500).json({ error: message });
+  }
+});
+
+// ---- Preenchimento automático da ficha de personagem -------------------------
+interface CharacterSuggestBody {
+  messages?: IncomingMessage[];
+  difficulty?: string;
+  current?: Record<string, unknown>;
+}
+
+const CHARACTER_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    race: { type: 'string' },
+    className: { type: 'string' },
+    origin: { type: 'string' },
+    attributes: {
+      type: 'object',
+      properties: {
+        potencia: { type: 'integer' },
+        agilidade: { type: 'integer' },
+        percepcao: { type: 'integer' },
+        engenho: { type: 'integer' },
+      },
+      required: ['potencia', 'agilidade', 'percepcao', 'engenho'],
+    },
+    skills: { type: 'array', items: { type: 'string' } },
+    classAbility: { type: 'string' },
+    companion: { type: 'string' },
+    equipment: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['name', 'race', 'className', 'origin', 'attributes', 'skills', 'classAbility', 'companion', 'equipment'],
+};
+
+app.post('/api/gm/character-suggest', async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as CharacterSuggestBody;
+  const messages = Array.isArray(body.messages) ? body.messages.slice(-8) : [];
+  if (messages.length === 0) {
+    res.status(400).json({ error: 'Sem contexto da campanha para sugerir a ficha.' });
+    return;
+  }
+
+  const clean = (t: string) =>
+    String(t)
+      .replace(/\[\[[^\]]*\]\]/g, '')
+      .slice(0, 3500);
+  const transcript = messages.map((m) => `${m.role === 'model' ? 'MESTRE' : 'JOGADOR'}: ${clean(m.text)}`).join('\n\n');
+  const simple = body.difficulty === 'muito-facil' || body.difficulty === 'facil';
+  const filled = Object.entries(body.current ?? {})
+    .filter(([, v]) => typeof v === 'string' && v.trim())
+    .map(([k, v]) => `- ${k}: ${String(v).slice(0, 200)}`)
+    .join('\n');
+
+  const prompt = `Você é o Mestre de uma campanha de RPG solo em Português (BR) e vai sugerir a FICHA INICIAL do personagem do jogador.
+Use o universo, o estilo e as raças/classes que aparecem na conversa abaixo. Se o Mestre já listou raças e classes, ESCOLHA UMA RAÇA E UMA CLASSE dentre as listadas, com os nomes exatos. Se nada foi listado, crie opções coerentes com o estilo do universo.
+
+Regras da ficha:
+- name: nome criativo e coerente com o universo e a raça.
+- race e className: nomes curtos.
+- origin: histórico em 1 ou 2 frases curtas.
+- attributes: distribua EXATAMENTE os valores +2, +1, 0 e -1 entre potencia, agilidade, percepcao e engenho (cada valor usado uma vez), coerente com a classe.
+- skills: exatamente 2 perícias, ligadas à classe, em poucas palavras.
+- classAbility: 1 habilidade especial de classe, com limite de usos por descanso, em uma frase.
+- companion: um companheiro ou aliado curto, ou "Nenhum".
+- equipment: lista de itens iniciais (inclua "Mochila", "Cantil de água" e "3 dias de ração" mais 2 a 4 itens da classe, com detalhes como cor ou material quando fizer sentido).
+${simple ? '- O jogador é iniciante: use linguagem simples e escolhas fáceis de entender.\n' : ''}${filled ? `\nO jogador JÁ PREENCHEU os campos abaixo: mantenha-os exatamente como estão e complete só o restante de forma coerente.\n${filled}\n` : ''}
+CONVERSA:
+${transcript}`;
+
+  try {
+    let text = '';
+    if (useOllama()) {
+      const r = await ollamaChat({
+        stream: false,
+        format: CHARACTER_JSON_SCHEMA,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      text = ((await r.json()) as { message?: { content?: string } }).message?.content ?? '';
+    } else {
+      let ai: GoogleGenAI;
+      try {
+        ai = getGeminiClient();
+      } catch {
+        res.status(500).json({ error: 'Chave da API Gemini não configurada.' });
+        return;
+      }
+      const response = await retryUnavailable(() => ai.models.generateContent({
+        model: GEMINI_MODEL(),
+        contents: prompt,
+        config: {
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              race: { type: Type.STRING },
+              className: { type: Type.STRING },
+              origin: { type: Type.STRING },
+              attributes: {
+                type: Type.OBJECT,
+                properties: {
+                  potencia: { type: Type.INTEGER },
+                  agilidade: { type: Type.INTEGER },
+                  percepcao: { type: Type.INTEGER },
+                  engenho: { type: Type.INTEGER },
+                },
+                required: ['potencia', 'agilidade', 'percepcao', 'engenho'],
+              },
+              skills: { type: Type.ARRAY, items: { type: Type.STRING } },
+              classAbility: { type: Type.STRING },
+              companion: { type: Type.STRING },
+              equipment: { type: Type.ARRAY, items: { type: Type.STRING } },
+            },
+            required: ['name', 'race', 'className', 'origin', 'attributes', 'skills', 'classAbility', 'companion', 'equipment'],
+          },
+        },
+      }));
+      text = response.text ?? '';
+    }
+    res.json(JSON.parse(text.trim()));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro ao sugerir a ficha.';
+    const busy = message.includes('503') || message.includes('UNAVAILABLE');
+    res.status(busy ? 503 : 500).json({
+      error: busy
+        ? 'O Mestre está ocupado no momento. Tente o preenchimento automático de novo em instantes.'
+        : useOllama()
+          ? ollamaErrorMessage(err)
+          : 'Não foi possível sugerir a ficha agora. Tente novamente.',
+    });
   }
 });
 

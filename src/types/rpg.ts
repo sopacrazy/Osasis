@@ -11,6 +11,21 @@ export interface PlayerAttributes {
   engenho: number;
 }
 
+export interface CharacterSheet {
+  name: string;
+  race: string;
+  className: string;
+  origin: string;
+  attributes: PlayerAttributes;
+  skills: [string, string];
+  classAbility: string;
+  companion: string;
+  equipment: string[];
+  gold: number;
+  silver: number;
+  copper: number;
+}
+
 export interface DiceRollRecord {
   id: string;
   timestamp: string;
@@ -44,6 +59,8 @@ export interface ChatMessage {
   rollAnswerTo?: string;
   /** Rolagem feita no cartão (registro completo). */
   roll?: DiceRollRecord;
+  /** Mensagem do jogador que envia a ficha de personagem pedida pelo Mestre (id da mensagem do Mestre). */
+  sheetAnswerTo?: string;
 }
 
 export interface GuideQuest {
@@ -107,6 +124,7 @@ export interface Campaign {
   subtitle: string;
   universe: string;
   difficulty?: Difficulty;
+  character?: CharacterSheet;
   createdAt: string;
   updatedAt: string;
   attributes: PlayerAttributes;

@@ -13,6 +13,7 @@ import {
 import type {
   Campaign,
   CampaignGuide,
+  CharacterSheet,
   ChatMessage,
   DiceRollRecord,
   Difficulty,
@@ -27,6 +28,8 @@ import { DieIcon } from './components/DieIcon';
 import { RulesModal } from './components/RulesModal';
 import { CampaignsModal } from './components/CampaignsModal';
 import { NewCampaignModal } from './components/NewCampaignModal';
+import { CharacterSheetModal } from './components/CharacterSheetModal';
+import { formatSheetForChat, sheetToNotes } from './utils/characterSheet';
 import { SettingsModal } from './components/SettingsModal';
 import { narrator } from './services/narrator/narrator';
 import { apiFetch } from './utils/api';
@@ -101,6 +104,8 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
   // com mais de uma campanha na conta, mostra a lista logo após o login para escolher qual continuar
   const [campaignsOpen, setCampaignsOpen] = useState<boolean>(initialCampaigns.length > 1);
   const [newCampaignOpen, setNewCampaignOpen] = useState<boolean>(false);
+  // id da mensagem do Mestre que pediu a ficha (abre o formulário quando preenchido)
+  const [sheetFor, setSheetFor] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
   const [chatFontSize, setChatFontSize] = useState<number>(() => {
@@ -459,15 +464,18 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
     });
   };
 
-  const sendUserMessage = async (userMsg: ChatMessage) => {
-    const nextMessages = [...activeCampaign.messages, userMsg];
+  // `patch` altera a campanha junto com a mensagem (ex.: ficha salva), valendo também para a memória
+  // enviada ao Mestre neste mesmo turno.
+  const sendUserMessage = async (userMsg: ChatMessage, patch?: (camp: Campaign) => Campaign) => {
+    const base = patch ? patch(activeCampaign) : activeCampaign;
+    const nextMessages = [...base.messages, userMsg];
     const snapshot: Campaign = {
-      ...activeCampaign,
+      ...base,
       messages: nextMessages,
     };
 
     updateActiveCampaign((camp) => ({
-      ...camp,
+      ...(patch ? patch(camp) : camp),
       messages: [...camp.messages, userMsg],
     }));
 
@@ -477,6 +485,35 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
     }));
 
     await streamGmResponse(apiHistory, snapshot);
+  };
+
+  // Ficha salva: atualiza atributos e Bloco de Notas e envia a ficha ao Mestre no chat
+  const handleSaveSheet = async (sheet: CharacterSheet) => {
+    const requestId = sheetFor;
+    setSheetFor(null);
+    if (!requestId || isStreaming) return;
+    const notes = sheetToNotes(sheet);
+    await sendUserMessage(
+      {
+        id: `msg-user-${Date.now()}`,
+        role: 'user',
+        text: formatSheetForChat(sheet),
+        createdAt: new Date().toISOString(),
+        sheetAnswerTo: requestId,
+      },
+      (camp) => ({
+        ...camp,
+        attributes: sheet.attributes,
+        character: sheet,
+        notes: camp.notes.map((n) =>
+          n.id === 'tab-ficha'
+            ? { ...n, content: notes.ficha }
+            : n.id === 'tab-inventario'
+              ? { ...n, content: notes.inventario }
+              : n
+        ),
+      })
+    );
   };
 
   const handleRetryLastTurn = async () => {
@@ -764,6 +801,7 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
             chatFontSize={chatFontSize}
             pendingRoll={pendingRoll}
             onRollRequest={handleRollRequest}
+            onOpenSheet={setSheetFor}
           />
         </div>
 
@@ -932,6 +970,15 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
           setActiveCampaignId(camp.id);
           setMobileView('chat');
         }}
+      />
+
+      <CharacterSheetModal
+        key={activeCampaign.id}
+        open={sheetFor !== null}
+        onClose={() => setSheetFor(null)}
+        messages={activeCampaign.messages}
+        difficulty={activeCampaign.difficulty}
+        onSave={(sheet) => void handleSaveSheet(sheet)}
       />
 
       <NewCampaignModal

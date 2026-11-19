@@ -19,7 +19,8 @@ import { DieIcon } from './DieIcon';
 import { NarratorControls } from './NarratorControls';
 import { getDifficulty } from '../data/difficulty';
 import { RollRequestCard } from './RollRequestCard';
-import { parseRollRequest, stripRollTags, type PendingRoll } from '../utils/rollRequest';
+import { SheetRequestCard } from './SheetRequestCard';
+import { hasSheetRequest, parseRollRequest, stripRollTags, type PendingRoll } from '../utils/rollRequest';
 import { narrator } from '../services/narrator/narrator';
 
 interface ChatPanelProps {
@@ -40,6 +41,7 @@ interface ChatPanelProps {
   chatFontSize: number;
   pendingRoll: PendingRoll | null;
   onRollRequest: (messageId: string) => void;
+  onOpenSheet: (messageId: string) => void;
 }
 
 function extractInventoryOrStateSnippet(text: string): string {
@@ -70,6 +72,7 @@ export function ChatPanel({
   chatFontSize,
   pendingRoll,
   onRollRequest,
+  onOpenSheet,
 }: ChatPanelProps) {
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -247,6 +250,15 @@ export function ChatPanel({
                     />
                   ) : null;
                 })()}
+                {hasSheetRequest(msg.text) && (
+                  <SheetRequestCard
+                    messageId={msg.id}
+                    messages={campaign.messages}
+                    character={campaign.character}
+                    disabled={isStreaming}
+                    onOpen={onOpenSheet}
+                  />
+                )}
               </article>
             );
           })}
