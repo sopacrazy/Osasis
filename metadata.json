@@ -1,0 +1,6 @@
+{
+  "name": "Crônica & Dado",
+  "description": "Mesa solo de RPG com Mestre de IA tático, rolador de dados poliédricos independente e bloco de notas persistente do jogador.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

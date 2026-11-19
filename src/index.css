@@ -1,0 +1,112 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle custom scrollbars for multi-pane workbench */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 125, 138, 0.28);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 125, 138, 0.48);
+}
+
+/* Clean markdown prose styling inside GM messages */
+.gm-prose h1,
+.gm-prose h2,
+.gm-prose h3,
+.gm-prose h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.gm-prose h1 { font-size: 1.25rem; }
+.gm-prose h2 { font-size: 1.125rem; }
+.gm-prose h3 { font-size: 1rem; }
+
+.gm-prose p {
+  margin-bottom: 0.75rem;
+  line-height: 1.65;
+}
+
+.gm-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.gm-prose ul,
+.gm-prose ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.gm-prose ul {
+  list-style-type: disc;
+}
+
+.gm-prose ol {
+  list-style-type: decimal;
+}
+
+.gm-prose li {
+  margin-bottom: 0.25rem;
+  line-height: 1.6;
+}
+
+.gm-prose strong {
+  font-weight: 600;
+}
+
+.gm-prose hr {
+  border-color: rgba(120, 125, 138, 0.22);
+  margin: 0.9rem 0;
+}
+
+.gm-prose blockquote {
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  background: rgba(217, 119, 6, 0.06);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  margin: 0.75rem 0;
+  font-size: 0.9375rem;
+}
+
+.gm-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background: rgba(120, 125, 138, 0.14);
+}
