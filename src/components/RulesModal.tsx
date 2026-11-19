@@ -10,6 +10,7 @@ import {
   FlaskConical,
   Users,
   ScrollText,
+  Backpack,
 } from 'lucide-react';
 import type { CampaignGuide } from '../types/rpg';
 
@@ -21,7 +22,7 @@ interface RulesModalProps {
   onSyncGuide: () => void;
 }
 
-type GuideTab = 'quests' | 'creatures' | 'locations' | 'remedies' | 'npcs' | 'rules';
+type GuideTab = 'inventory' | 'quests' | 'creatures' | 'locations' | 'remedies' | 'npcs' | 'rules';
 
 export function RulesModal({
   open,
@@ -30,7 +31,7 @@ export function RulesModal({
   isSyncing,
   onSyncGuide,
 }: RulesModalProps) {
-  const [activeTab, setActiveTab] = useState<GuideTab>('quests');
+  const [activeTab, setActiveTab] = useState<GuideTab>('inventory');
   const [query, setQuery] = useState('');
 
   const q = query.trim().toLowerCase();
@@ -63,6 +64,12 @@ export function RulesModal({
           item.effect.toLowerCase().includes(q) ||
           (item.usageOrSource ?? '').toLowerCase().includes(q)
       ),
+      inventory: (guide.inventory ?? []).filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
+          item.status.toLowerCase().includes(q)
+      ),
       knownCharacters: guide.knownCharacters.filter(
         (item) =>
           item.name.toLowerCase().includes(q) ||
@@ -76,6 +83,7 @@ export function RulesModal({
   if (!open) return null;
 
   const tabs: { id: GuideTab; label: string; icon: typeof Compass; count?: number }[] = [
+    { id: 'inventory', label: 'Inventário', icon: Backpack, count: (filtered.inventory ?? []).length },
     { id: 'quests', label: 'Missões', icon: Compass, count: filtered.currentQuests.length },
     { id: 'creatures', label: 'Raças & Bichos', icon: ShieldAlert, count: filtered.racesAndCreatures.length },
     { id: 'locations', label: 'Locais & Coleta', icon: MapPin, count: filtered.knownLocations.length },
@@ -295,6 +303,37 @@ export function RulesModal({
                     <p className="text-xs sm:text-[13px] text-zinc-700 dark:text-zinc-300">
                       {loc.notes}
                     </p>
+                  </div>
+                ))
+              )}
+            </>
+          )}
+
+          {activeTab === 'inventory' && (
+            <>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                O Mestre consulta este registro a cada turno para não esquecer nem trocar seus itens.
+              </p>
+              {(filtered.inventory ?? []).length === 0 ? (
+                <p className="text-xs text-zinc-500 py-8 text-center">
+                  Nenhum item registrado ainda. Ele é preenchido automaticamente conforme a história avança.
+                </p>
+              ) : (
+                (filtered.inventory ?? []).map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-lg border border-zinc-200 dark:border-[#2A2E38] bg-zinc-50/70 dark:bg-[#1C1F26] p-3.5 space-y-1"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                        {item.name}
+                        {item.quantity && item.quantity > 1 ? ` x${item.quantity}` : ''}
+                      </h3>
+                      <span className="text-[11px] px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                        {item.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-700 dark:text-zinc-300">{item.description}</p>
                   </div>
                 ))
               )}

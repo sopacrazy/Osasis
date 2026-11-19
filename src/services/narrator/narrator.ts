@@ -1,4 +1,4 @@
-import { apiUrl } from '../../utils/api';
+import { apiFetch } from '../../utils/api';
 import { getCachedAudio, hashKey, putCachedAudio } from './audioCache';
 import {
   fitToBudget,
@@ -134,7 +134,6 @@ export class NarratorService {
       this.refreshOfflineVoices();
       window.speechSynthesis.addEventListener?.('voiceschanged', () => this.refreshOfflineVoices());
     }
-    void this.refreshStatus();
   }
 
   // ---- store -----------------------------------------------------------------
@@ -166,7 +165,7 @@ export class NarratorService {
   // ---- status / vozes ---------------------------------------------------------
   async refreshStatus() {
     try {
-      const r = await fetch(apiUrl('/api/narracao/status'));
+      const r = await apiFetch('/api/narracao/status');
       if (!r.ok) throw new Error(String(r.status));
       const s = (await r.json()) as ElevenStatus;
       this.set({ eleven: s });
@@ -176,7 +175,7 @@ export class NarratorService {
   }
 
   async listElevenVoices(): Promise<{ voiceId: string; name: string; labels: Record<string, string> }[]> {
-    const r = await fetch(apiUrl('/api/narracao/voices'));
+    const r = await apiFetch('/api/narracao/voices');
     const data = (await r.json().catch(() => ({}))) as {
       voices?: { voiceId: string; name: string; labels: Record<string, string> }[];
       error?: string;
@@ -418,7 +417,7 @@ export class NarratorService {
       const job = this.withFetchSlot(async () => {
         if (s.elevenFailed || s.controller.signal.aborted) return null;
         try {
-          const r = await fetch(apiUrl('/api/narracao'), {
+          const r = await apiFetch('/api/narracao', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: s.controller.signal,

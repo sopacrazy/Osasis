@@ -40,6 +40,10 @@ export interface ChatMessage {
   isTechnicalAdjustment?: boolean;
   attachedRolls?: string[];
   error?: boolean;
+  /** Mensagem do jogador que responde a um pedido de rolagem do Mestre (id da mensagem do Mestre). */
+  rollAnswerTo?: string;
+  /** Rolagem feita no cartão (registro completo). */
+  roll?: DiceRollRecord;
 }
 
 export interface GuideQuest {
@@ -76,12 +80,22 @@ export interface GuideCharacter {
   notes?: string;
 }
 
+export interface GuideInventoryItem {
+  name: string;
+  /** Características exatas citadas na história (cor, material, estado, encantamentos). */
+  description: string;
+  /** equipado, na mochila, no chão... */
+  status: string;
+  quantity?: number;
+}
+
 export interface CampaignGuide {
   currentQuests: GuideQuest[];
   knownLocations: GuideLocation[];
   racesAndCreatures: GuideRaceOrCreature[];
   remediesAndItems: GuideRemedyOrItem[];
   knownCharacters: GuideCharacter[];
+  inventory?: GuideInventoryItem[];
   lastUpdatedAt?: string;
 }
 

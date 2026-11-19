@@ -9,7 +9,9 @@ const STATE_BLOCK_LINE =
 const RULE_LINE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
 
 /** Retorna só a parte narrativa (sem bloco de estado e sem markdown). */
-export function narrativeOf(raw: string): string {
+export function narrativeOf(rawText: string): string {
+  // marca interna de pedido de rolagem (completa ou ainda em streaming) nunca é lida em voz alta
+  const raw = rawText.replace(/\[\[[^\]]*\]\]/g, '').replace(/\[\[[^\]]*$/, '');
   const kept: string[] = [];
   for (const line of raw.split('\n')) {
     if (RULE_LINE.test(line) && kept.some((l) => l.trim())) break; // "---" após a narração

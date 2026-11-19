@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { X, Download, Upload, Trash2, Check, Plus } from 'lucide-react';
 import type { Campaign } from '../types/rpg';
 import { getDifficulty } from '../data/difficulty';
@@ -25,6 +25,7 @@ export function CampaignsModal({
   onImportCampaign,
 }: CampaignsModalProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -72,7 +73,7 @@ export function CampaignsModal({
               Suas Campanhas
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Salvas localmente neste navegador · exporte backups em JSON quando quiser
+              Salvas na sua conta, em qualquer aparelho · exporte backups em JSON quando quiser
             </p>
           </div>
           <button
@@ -117,42 +118,72 @@ export function CampaignsModal({
                         {getDifficulty(camp.difficulty)!.label}
                       </span>
                     )}
-                    {camp.subtitle} · {camp.messages.length} msgs · {camp.notes.length} abas de notas
+                    {camp.subtitle} · {camp.messages.filter((m) => m.role === 'user' && !m.isTechnicalAdjustment).length} turnos
+                    {camp.updatedAt &&
+                      ` · última vez ${new Date(camp.updatedAt).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {!isActive && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectCampaign(camp.id);
-                        onClose();
-                      }}
-                      className="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium"
-                    >
-                      Abrir
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleExportJson(camp)}
-                    title="Exportar backup JSON"
-                    className="p-2 rounded-md border border-zinc-200 dark:border-[#2E323D] text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#252932]"
-                    aria-label="Exportar backup JSON"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                  {campaigns.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCampaign(camp.id)}
-                      title="Excluir campanha"
-                      className="p-2 rounded-md border border-zinc-200 dark:border-[#2E323D] text-zinc-500 hover:text-rose-500 hover:bg-zinc-100 dark:hover:bg-[#252932]"
-                      aria-label="Excluir campanha"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  {confirmingId === camp.id ? (
+                    <>
+                      <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                        Excluir de vez?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmingId(null);
+                          onDeleteCampaign(camp.id);
+                        }}
+                        className="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium cursor-pointer"
+                      >
+                        Excluir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(null)}
+                        className="px-3 py-1.5 rounded-md border border-zinc-200 dark:border-[#2E323D] text-xs font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectCampaign(camp.id);
+                          onClose();
+                        }}
+                        className="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium cursor-pointer"
+                      >
+                        Continuar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExportJson(camp)}
+                        title="Exportar backup JSON"
+                        className="p-2 rounded-md border border-zinc-200 dark:border-[#2E323D] text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#252932] cursor-pointer"
+                        aria-label="Exportar backup JSON"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(camp.id)}
+                        title="Excluir campanha"
+                        className="p-2 rounded-md border border-zinc-200 dark:border-[#2E323D] text-zinc-500 hover:text-rose-500 hover:bg-zinc-100 dark:hover:bg-[#252932] cursor-pointer"
+                        aria-label="Excluir campanha"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

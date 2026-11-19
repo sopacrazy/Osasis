@@ -5,12 +5,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import { registerNarrationRoutes } from './narration.ts';
+import { createStore } from './store.ts';
+import { registerAuthRoutes, requireAuth } from './auth.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '4mb' }));
+app.use(express.json({ limit: '8mb' }));
+
+// Contas, sessões e campanhas por usuário (MariaDB se DB_HOST estiver definido; senão arquivos locais).
+const store = await createStore();
+console.log('Armazenamento:', store.kind === 'mysql' ? 'MariaDB' : 'arquivos locais (./data)');
+await registerAuthRoutes(app, store);
+// Mestre e narração só para quem está logado.
+app.use(['/api/gm', '/api/narracao'], requireAuth);
 
 registerNarrationRoutes(app);
 
@@ -68,8 +77,9 @@ const GUIDE_JSON_SCHEMA = {
     racesAndCreatures: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, bonuses: { type: 'string' }, weaknesses: { type: 'string' }, notes: { type: 'string' } }, required: ['name', 'bonuses', 'weaknesses'] } },
     remediesAndItems: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, effect: { type: 'string' }, usageOrSource: { type: 'string' } }, required: ['name', 'effect'] } },
     knownCharacters: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, role: { type: 'string' }, allegiance: { type: 'string' }, notes: { type: 'string' } }, required: ['name', 'role', 'allegiance'] } },
+    inventory: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, description: { type: 'string' }, status: { type: 'string' }, quantity: { type: 'integer' } }, required: ['name', 'description', 'status'] } },
   },
-  required: ['currentQuests', 'knownLocations', 'racesAndCreatures', 'remediesAndItems', 'knownCharacters'],
+  required: ['currentQuests', 'knownLocations', 'racesAndCreatures', 'remediesAndItems', 'knownCharacters', 'inventory'],
 };
 
 async function ollamaChat(body: Record<string, unknown>): Promise<globalThis.Response> {
@@ -241,7 +251,8 @@ Regras de atualização:
 4. Em "racesAndCreatures": raças, inimigos e criaturas descobertas, detalhando bônus, fraquezas/penalidades (ex: vulnerabilidade ao frio, sol, fogo, armadura) e táticas.
 5. Em "remediesAndItems": para que serve cada remédio, poção, erva, recurso ou receita de criação/forja descoberta.
 6. Em "knownCharacters": NPCs aliados, neutros ou inimigos com nome único, papel e alinhamento.
-7. Se nada novo foi descoberto nos turnos recentes, retorne o Guia Atual preservado.
+7. Em "inventory": TUDO o que o protagonista possui agora (equipado, na mochila ou largado no chão por perto). Para cada item: nome; "description" com as características EXATAS já citadas na história (cor, material, tamanho, estado, marcas, encantamentos), copiadas literalmente — NUNCA troque uma cor, material ou detalhe; "status" (ex.: "equipado", "na mochila", "no chão"); e "quantity". Remova itens usados, perdidos, destruídos ou entregues. Não invente item que a história não citou.
+8. Se nada novo foi descoberto nos turnos recentes, retorne o Guia Atual preservado.
 
 GUIA ATUAL:
 ${JSON.stringify(body.currentGuide ?? {})}
@@ -347,6 +358,19 @@ ${transcript}`;
                 required: ['name', 'role', 'allegiance'],
               },
             },
+            inventory: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  status: { type: Type.STRING },
+                  quantity: { type: Type.INTEGER },
+                },
+                required: ['name', 'description', 'status'],
+              },
+            },
           },
           required: [
             'currentQuests',
@@ -354,6 +378,7 @@ ${transcript}`;
             'racesAndCreatures',
             'remediesAndItems',
             'knownCharacters',
+            'inventory',
           ],
         },
       },

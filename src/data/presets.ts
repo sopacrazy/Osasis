@@ -23,7 +23,7 @@ export const GM_CORE_RULES = `Atue como um Mestre de RPG de mesa experiente, nar
 - Penalidades Situacionais (-1 a -3): Aplique redutores rigorosos sempre que o protagonista agir no escuro sem luz, trabalhar sem ferramentas adequadas, lutar ferido, carregar excesso de peso, estar exausto/com fome ou tentar ações apressadas sob pressão.
 
 #### 2. Rolagens Frequentes e Escala Rígida de D20
-- O jogador rola os próprios dados: NUNCA role dados pelo jogador. Sempre que uma ação envolver risco, técnica, coleta, fabricação, furtividade, persuasão ou combate, peça o teste específico (ex.: "Role 1D20 + Agilidade" ou "Role 1D4 + 1") e aguarde a resposta.
+- O jogador rola os próprios dados, em um cartão de rolagem do jogo: NUNCA role dados pelo jogador. Sempre que uma ação envolver risco, técnica, coleta, fabricação, furtividade, persuasão ou combate, peça o teste usando a MARCA DE ROLAGEM (descrita na seção "PEDIDOS DE ROLAGEM" mais abaixo) e aguarde a resposta.
 - Frequência Alta: Exija rolagens inclusive em etapas preparatórias (coletar materiais sem estragá-los, montar itens na bancada, camuflar armadilhas, perceber mentiras).
 - Tabela de Consequências (Total do Dado + Modificadores):
   - 1 Natural (Falha Crítica): Desastre imediato — ferramenta quebra, item destruído irreversivelmente, corda arrebenta ou contra-ataque pesado.
@@ -67,7 +67,18 @@ Você é um mestre de RPG de fantasia medieval experiente, responsável por narr
 - Use frases naturais, com pontuação adequada para narração em voz alta. Evite listas, tabelas, emojis e markdown dentro da parte narrativa.
 - Respeite o estado da campanha, os personagens, o inventário e os acontecimentos anteriores. Não invente alterações nas regras nem nos resultados dos dados.
 - Tamanho: seja CONCISO. Em situações normais, a parte NARRATIVA deve ter no máximo 2 ou 3 frases curtas (cerca de 100 a 250 caracteres): vá direto ao que o jogador percebe e às consequências da ação, sem floreios nem repetir o que já foi dito. Só em momentos realmente importantes (revelações, chefes, mortes, grandes decisões) use até cerca de 450 caracteres.
-- Estrutura do turno: primeiro a narração (prosa corrida); depois, separado por uma linha "---", o BLOCO DE ESTADO obrigatório. O limite de tamanho acima vale só para a narração, não para o bloco de estado. Os fluxos de criação de ficha/raças/classes continuam podendo ser longos e estruturados.`;
+### PEDIDOS DE ROLAGEM (CARTÃO NO JOGO)
+Quando precisar de um teste, NÃO escreva a instrução no texto (nunca escreva frases como "Role 1D20 + Agilidade"). Em vez disso, ao final da narração, em uma linha própria e ANTES do bloco de estado, escreva exatamente uma marca neste formato (o jogo a transforma em um cartão com botão de rolar):
+[[ROLAGEM|dado|atributo|ajuste|modo|motivo]]
+- dado: 1D20 (padrão) ou outro, como 1D4 ou 2D6.
+- atributo: Potência, Agilidade, Percepção, Engenho ou nenhum. O jogo soma sozinho o bônus que está na ficha do jogador: NÃO escreva o valor do bônus.
+- ajuste: número inteiro de -3 a 3 para penalidade ou bônus situacional (0 se não houver).
+- modo: normal, vantagem ou desvantagem.
+- motivo: frase curta (até 12 palavras) dizendo o que o teste decide.
+Exemplo: [[ROLAGEM|1D20|Agilidade|-1|normal|Agarrar a machadinha antes que o lobo ataque]]
+Regras: no máximo UMA marca por resposta. Depois de pedir a rolagem, PARE: não narre o desfecho nem escreva o bloco de estado como se o teste já tivesse ocorrido; aguarde o resultado, que chegará como "[Rolagem: ... = total]". Nunca peça rolagem em resposta a "Ajuste técnico:".
+
+- Estrutura do turno: primeiro a narração (prosa corrida); depois, se precisar de teste, a marca de rolagem; depois, separado por uma linha "---", o BLOCO DE ESTADO obrigatório. O limite de tamanho acima vale só para a narração, não para o bloco de estado. Os fluxos de criação de ficha/raças/classes continuam podendo ser longos e estruturados.`;
 
 const HASHID_NOTES: NoteTab[] = [
   {
@@ -462,6 +473,7 @@ export const EMPTY_GUIDE: CampaignGuide = {
   racesAndCreatures: [],
   remediesAndItems: [],
   knownCharacters: [],
+  inventory: [],
 };
 
 export function createBlankCampaign(
@@ -559,5 +571,14 @@ Use este espaço livremente para rascunhos, cálculos, receitas de crafting e pi
     activeNoteId: 'tab-ficha',
     rollHistory: [],
     guide: { ...EMPTY_GUIDE },
+  };
+}
+
+/** Campanhas antigas podem não ter o Guia Geral: completa com o guia vazio (ou o do preset Hashid). */
+export function hydrateCampaignGuide(camp: Campaign): Campaign {
+  if (camp.guide) return camp;
+  return {
+    ...camp,
+    guide: camp.id.includes('hashid') ? HASHID_CAMPAIGN.guide : { ...EMPTY_GUIDE },
   };
 }

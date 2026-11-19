@@ -16,6 +16,7 @@ import {
 import type { AttributeKey, DiceRollRecord, DieSides, PlayerAttributes, RollMode } from '../types/rpg';
 import { DieIcon } from './DieIcon';
 import { playDiceRollSound } from '../utils/sound';
+import { performRoll } from '../utils/dice';
 
 interface DicePanelProps {
   attributes: PlayerAttributes;
@@ -23,7 +24,6 @@ interface DicePanelProps {
   rollHistory: DiceRollRecord[];
   onAddRoll: (record: DiceRollRecord) => void;
   onClearHistory: () => void;
-  onInsertRollToChat: (formatted: string) => void;
 }
 
 const DIE_TYPES: DieSides[] = [4, 6, 8, 10, 12, 20, 100];
@@ -35,45 +35,7 @@ const ATTR_META: { key: AttributeKey; short: string; label: string }[] = [
   { key: 'engenho', short: 'Eng', label: 'Engenho' },
 ];
 
-function evaluateD20Outcome(
-  naturalDie: number,
-  total: number
-): { label: string; tone: DiceRollRecord['outcomeTone'] } {
-  if (naturalDie === 1) {
-    return { label: '1 Natural · Falha Crítica', tone: 'critical-fail' };
-  }
-  if (naturalDie === 20 || total >= 19) {
-    return {
-      label: naturalDie === 20 ? '20 Natural · Sucesso Crítico' : '19+ · Sucesso Crítico',
-      tone: 'critical-success',
-    };
-  }
-  if (total <= 8) {
-    return { label: '2–8 · Falha / Complicação', tone: 'fail' };
-  }
-  if (total <= 13) {
-    return { label: '9–13 · Sucesso Parcial', tone: 'partial' };
-  }
-  return { label: '14–18 · Sucesso Limpo', tone: 'success' };
-}
 
-export function formatRollForChat(record: DiceRollRecord): string {
-  const diePart =
-    record.mode === 'advantage' && record.droppedRoll !== undefined
-      ? `2D20 Vantagem (${record.rolls[0]} | desc. ${record.droppedRoll})`
-      : record.mode === 'disadvantage' && record.droppedRoll !== undefined
-        ? `2D20 Desvantagem (${record.rolls[0]} | desc. ${record.droppedRoll})`
-        : `${record.quantity}D${record.sides} (${record.rolls.join(', ')})`;
-
-  const modPart =
-    record.modifier !== 0
-      ? ` ${record.modifier > 0 ? `+ ${record.modifier}` : `- ${Math.abs(record.modifier)}`}${
-          record.modifierLabel ? ` ${record.modifierLabel}` : ''
-        }`
-      : '';
-
-  return `[Rolagem: ${diePart}${modPart} = ${record.total}]`;
-}
 
 export function DicePanel({
   attributes,
@@ -81,7 +43,6 @@ export function DicePanel({
   rollHistory,
   onAddRoll,
   onClearHistory,
-  onInsertRollToChat,
 }: DicePanelProps) {
   const [selectedDie, setSelectedDie] = useState<DieSides>(20);
   const [quantity, setQuantity] = useState<number>(1);
@@ -120,51 +81,14 @@ export function DicePanel({
       setSelectedDie(overrideDie);
     }
 
-    const effectiveMode: RollMode = die === 20 && quantity === 1 ? mode : 'normal';
-    let rolls: number[] = [];
-    let droppedRoll: number | undefined;
-
-    if (effectiveMode === 'advantage' || effectiveMode === 'disadvantage') {
-      const r1 = Math.floor(Math.random() * 20) + 1;
-      const r2 = Math.floor(Math.random() * 20) + 1;
-      const kept = effectiveMode === 'advantage' ? Math.max(r1, r2) : Math.min(r1, r2);
-      droppedRoll = effectiveMode === 'advantage' ? Math.min(r1, r2) : Math.max(r1, r2);
-      rolls = [kept];
-    } else {
-      for (let i = 0; i < quantity; i++) {
-        rolls.push(Math.floor(Math.random() * die) + 1);
-      }
-    }
-
-    const diceSum = rolls.reduce((acc, v) => acc + v, 0);
-    const total = diceSum + modifier;
-    const modLabel = activeAttrKey
-      ? ATTR_META.find((a) => a.key === activeAttrKey)?.label
-      : undefined;
-
-    let outcomeLabel: string | undefined;
-    let outcomeTone: DiceRollRecord['outcomeTone'] | undefined;
-
-    if (die === 20 && rolls.length === 1) {
-      const outcome = evaluateD20Outcome(rolls[0], total);
-      outcomeLabel = outcome.label;
-      outcomeTone = outcome.tone;
-    }
-
-    const record: DiceRollRecord = {
-      id: `roll-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    const record = performRoll({
       sides: die,
-      quantity: effectiveMode === 'normal' ? quantity : 2,
-      rolls,
-      droppedRoll,
-      mode: effectiveMode,
+      quantity,
+      mode,
       modifier,
-      modifierLabel: modLabel,
-      total,
-      outcomeLabel,
-      outcomeTone,
-    };
+      modifierLabel: activeAttrKey ? ATTR_META.find((a) => a.key === activeAttrKey)?.label : undefined,
+    });
+    const outcomeTone = record.outcomeTone;
 
     if (soundEnabled) {
       playDiceRollSound(
@@ -291,13 +215,6 @@ export function DicePanel({
                     {roll.outcomeLabel ? ` · ${roll.outcomeLabel}` : ''}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onInsertRollToChat(formatRollForChat(roll))}
-                  className="shrink-0 px-2.5 py-1.5 rounded-md bg-amber-600/12 text-amber-700 dark:text-amber-300 hover:bg-amber-600/20 font-medium transition-colors"
-                >
-                  Enviar ao Chat
-                </button>
               </div>
             ))
           )}
@@ -360,17 +277,10 @@ export function DicePanel({
             </span>
           </button>
 
-          {/* Instant Send Roll to Chat */}
-          {latestRoll && (
-            <button
-              type="button"
-              onClick={() => onInsertRollToChat(formatRollForChat(latestRoll))}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Levar {latestRoll.total} para o Chat</span>
-            </button>
-          )}
+          <p className="text-[11px] text-center text-zinc-500 dark:text-zinc-400 shrink-0">
+            Bandeja livre: estas rolagens não vão para o Mestre. As rolagens do jogo são feitas no cartão que o Mestre
+            apresenta no chat.
+          </p>
 
           {/* Compact Controls: Quantity, Modifier & Attributes */}
           <div className="space-y-2 shrink-0">

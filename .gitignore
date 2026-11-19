@@ -10,3 +10,5 @@ coverage/
 .cache/
 *.zip
 *.ogg
+data/
+imagem.png

@@ -18,6 +18,8 @@ import type { Campaign } from '../types/rpg';
 import { DieIcon } from './DieIcon';
 import { NarratorControls } from './NarratorControls';
 import { getDifficulty } from '../data/difficulty';
+import { RollRequestCard } from './RollRequestCard';
+import { parseRollRequest, stripRollTags, type PendingRoll } from '../utils/rollRequest';
 import { narrator } from '../services/narrator/narrator';
 
 interface ChatPanelProps {
@@ -36,6 +38,8 @@ interface ChatPanelProps {
   onOpenCampaigns: () => void;
   onOpenRules: () => void;
   chatFontSize: number;
+  pendingRoll: PendingRoll | null;
+  onRollRequest: (messageId: string) => void;
 }
 
 function extractInventoryOrStateSnippet(text: string): string {
@@ -64,6 +68,8 @@ export function ChatPanel({
   onOpenCampaigns,
   onOpenRules,
   chatFontSize,
+  pendingRoll,
+  onRollRequest,
 }: ChatPanelProps) {
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -76,7 +82,7 @@ export function ChatPanel({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!isStreaming && draft.trim()) {
+      if (!isStreaming && draft.trim() && canSend) {
         onSendMessage();
       }
     }
@@ -96,6 +102,9 @@ export function ChatPanel({
     setSavedMsgId(msgId);
     setTimeout(() => setSavedMsgId(null), 1800);
   };
+
+  // com um pedido de rolagem em aberto, só "Ajuste técnico:" pode ser enviado
+  const canSend = !pendingRoll || draft.trimStart().toLowerCase().startsWith('ajuste técnico:');
 
   const turnCount = campaign.messages.filter((m) => m.role === 'user' && !m.isTechnicalAdjustment).length;
 
@@ -222,8 +231,22 @@ export function ChatPanel({
                   style={{ fontSize: `${chatFontSize}px` }}
                   className="gm-prose text-zinc-800 dark:text-zinc-200"
                 >
-                  <ReactMarkdown>{msg.text || '...'}</ReactMarkdown>
+                  <ReactMarkdown>{stripRollTags(msg.text) || '...'}</ReactMarkdown>
                 </div>
+                {(() => {
+                  const request = parseRollRequest(msg.text);
+                  return request ? (
+                    <RollRequestCard
+                      messageId={msg.id}
+                      request={request}
+                      messages={campaign.messages}
+                      attributes={campaign.attributes}
+                      isPending={pendingRoll?.messageId === msg.id}
+                      disabled={isStreaming}
+                      onRoll={onRollRequest}
+                    />
+                  ) : null;
+                })()}
               </article>
             );
           })}
@@ -330,12 +353,16 @@ export function ChatPanel({
               value={draft}
               onChange={(e) => onDraftChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Descreva sua ação, fala, rolagem ou resposta ao Mestre..."
+              placeholder={
+                pendingRoll
+                  ? 'Role o dado no cartão do Mestre acima para continuar...'
+                  : 'Descreva sua ação, fala ou resposta ao Mestre...'
+              }
               className="flex-1 min-h-[52px] max-h-36 resize-y rounded-lg border border-zinc-200 dark:border-[#2E323D] bg-zinc-50 dark:bg-[#111317] px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-amber-500"
             />
             <button
               type="button"
-              disabled={isStreaming || !draft.trim()}
+              disabled={isStreaming || !draft.trim() || !canSend}
               onClick={onSendMessage}
               className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-45 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shrink-0 whitespace-nowrap min-h-[48px] cursor-pointer"
             >
