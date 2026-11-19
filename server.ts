@@ -46,6 +46,14 @@ function getGeminiClient(): GoogleGenAI {
   });
 }
 
+// ---- Gemini: modelo e nível de raciocínio configuráveis ------------------
+// GEMINI_THINKING: MINIMAL | LOW | MEDIUM | HIGH. Mais baixo = a narração começa mais rápido.
+const GEMINI_MODEL = () => process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
+const GEMINI_THINKING = () => {
+  const v = (process.env.GEMINI_THINKING || 'LOW').toUpperCase() as keyof typeof ThinkingLevel;
+  return ThinkingLevel[v] ?? ThinkingLevel.LOW;
+};
+
 // ---- Provedor local (Ollama) -------------------------------------------
 // Ative com LLM_PROVIDER=ollama no .env. Funciona 100% offline.
 const useOllama = () => (process.env.LLM_PROVIDER ?? 'gemini').toLowerCase() === 'ollama';
@@ -125,7 +133,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     ok: true,
     provider: useOllama() ? 'ollama' : 'gemini',
-    model: useOllama() ? OLLAMA_MODEL() : 'gemini-4-hydrogen',
+    model: useOllama() ? OLLAMA_MODEL() : GEMINI_MODEL(),
     hasKey: Boolean(process.env.GEMINI_API_KEY),
   });
 });
@@ -164,21 +172,35 @@ app.post('/api/gm/chat', async (req: Request, res: Response) => {
   res.flushHeaders?.();
 
   try {
-    const stream = await ai.models.generateContentStream({
-      model: 'gemini-4-hydrogen',
-      contents,
-      config: {
-        systemInstruction: body.systemPrompt || '',
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.HIGH,
-        },
-      },
-    });
+    // O plano gratuito devolve 503 (alta demanda) em picos curtos: tenta de novo
+    // enquanto nenhum texto foi enviado ao jogador.
+    let sentAny = false;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const stream = await ai.models.generateContentStream({
+          model: GEMINI_MODEL(),
+          contents,
+          config: {
+            systemInstruction: body.systemPrompt || '',
+            thinkingConfig: {
+              thinkingLevel: GEMINI_THINKING(),
+            },
+          },
+        });
 
-    for await (const chunk of stream) {
-      const text = chunk.text;
-      if (text) {
-        res.write(`data: ${JSON.stringify({ text })}\n\n`);
+        for await (const chunk of stream) {
+          const text = chunk.text;
+          if (text) {
+            sentAny = true;
+            res.write(`data: ${JSON.stringify({ text })}\n\n`);
+          }
+        }
+        break;
+      } catch (e) {
+        const m = e instanceof Error ? e.message : '';
+        const transient = m.includes('503') || m.includes('UNAVAILABLE');
+        if (sentAny || !transient || attempt >= 4) throw e;
+        await new Promise((r) => setTimeout(r, 1500 * attempt));
       }
     }
 
@@ -253,7 +275,7 @@ ${transcript}`;
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-4-hydrogen',
+      model: GEMINI_MODEL(),
       contents: prompt,
       config: {
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
