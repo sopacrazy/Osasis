@@ -17,6 +17,7 @@ import {
 import type { Campaign } from '../types/rpg';
 import { DieIcon } from './DieIcon';
 import { NarratorControls } from './NarratorControls';
+import { getDifficulty } from '../data/difficulty';
 import { narrator } from '../services/narrator/narrator';
 
 interface ChatPanelProps {
@@ -111,6 +112,17 @@ export function ChatPanel({
               <span className="truncate">{campaign.subtitle}</span>
               <span aria-hidden="true">·</span>
               <span className="font-mono-tabular shrink-0">{turnCount} turnos</span>
+              {getDifficulty(campaign.difficulty) && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span
+                    title="Nível da campanha"
+                    className={`shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${getDifficulty(campaign.difficulty)!.badge}`}
+                  >
+                    {getDifficulty(campaign.difficulty)!.label}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 

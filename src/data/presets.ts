@@ -1,4 +1,4 @@
-import type { Campaign, CampaignGuide, NoteTab } from '../types/rpg';
+import type { Campaign, CampaignGuide, Difficulty, NoteTab } from '../types/rpg';
 
 export const GM_CORE_RULES = `Atue como um Mestre de RPG de mesa experiente, narrativo, tático e implacável. Estamos jogando uma campanha solo em turnos em Português (BR), onde o usuário interpreta o protagonista e você narra o mundo, os NPCs, os perigos e as consequências das escolhas.
 
@@ -464,7 +464,11 @@ export const EMPTY_GUIDE: CampaignGuide = {
   knownCharacters: [],
 };
 
-export function createBlankCampaign(title: string, attributes = { potencia: 2, agilidade: 1, percepcao: 0, engenho: -1 }): Campaign {
+export function createBlankCampaign(
+  title: string,
+  attributes = { potencia: 2, agilidade: 1, percepcao: 0, engenho: -1 },
+  difficulty: Difficulty = 'medio'
+): Campaign {
   const id = `campaign-${Date.now()}`;
   const now = new Date().toISOString();
 
@@ -536,6 +540,7 @@ Use este espaço livremente para rascunhos, cálculos, receitas de crafting e pi
     title: title.trim() || 'Nova Campanha Solo',
     subtitle: 'Criação de Universo · Turno 0',
     universe: 'A definir pelo jogador',
+    difficulty,
     createdAt: now,
     updatedAt: now,
     attributes,

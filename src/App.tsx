@@ -13,6 +13,7 @@ import type {
   CampaignGuide,
   ChatMessage,
   DiceRollRecord,
+  Difficulty,
   PlayerAttributes,
 } from './types/rpg';
 import { createBlankCampaign, EMPTY_GUIDE, GM_CORE_RULES, HASHID_CAMPAIGN } from './data/presets';
@@ -26,6 +27,7 @@ import { NewCampaignModal } from './components/NewCampaignModal';
 import { SettingsModal } from './components/SettingsModal';
 import { narrator } from './services/narrator/narrator';
 import { apiUrl } from './utils/api';
+import { difficultyPrompt } from './data/difficulty';
 import {
   setBackgroundMusicVolume,
   startBackgroundMusic,
@@ -232,6 +234,7 @@ export default function App() {
     if (campaign.gmContextNotes.trim()) {
       parts.push(`\n### CONTEXTO ESPECÍFICO DA CAMPANHA\n${campaign.gmContextNotes.trim()}`);
     }
+    parts.push(difficultyPrompt(campaign.difficulty));
     return parts.join('\n');
   };
 
@@ -468,8 +471,8 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handleCreateBlankCampaign = (title: string, attrs: PlayerAttributes) => {
-    const fresh = createBlankCampaign(title, attrs);
+  const handleCreateBlankCampaign = (title: string, attrs: PlayerAttributes, difficulty: Difficulty) => {
+    const fresh = createBlankCampaign(title, attrs, difficulty);
     setCampaigns((prev) => [fresh, ...prev]);
     setActiveCampaignId(fresh.id);
     setErrorMessage(null);
@@ -477,9 +480,10 @@ export default function App() {
     setMobileView('chat');
   };
 
-  const handleCreateHashidPreset = () => {
+  const handleCreateHashidPreset = (difficulty: Difficulty) => {
     const clone: Campaign = {
       ...HASHID_CAMPAIGN,
+      difficulty,
       id: `campaign-hashid-${Date.now()}`,
       title: 'Oásis da Ravina (Nova Cópia)',
       createdAt: new Date().toISOString(),

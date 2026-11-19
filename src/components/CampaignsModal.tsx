@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { X, Download, Upload, Trash2, Check, Plus } from 'lucide-react';
 import type { Campaign } from '../types/rpg';
+import { getDifficulty } from '../data/difficulty';
 
 interface CampaignsModalProps {
   open: boolean;
@@ -109,6 +110,13 @@ export function CampaignsModal({
                     )}
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                    {getDifficulty(camp.difficulty) && (
+                      <span
+                        className={`mr-1.5 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${getDifficulty(camp.difficulty)!.badge}`}
+                      >
+                        {getDifficulty(camp.difficulty)!.label}
+                      </span>
+                    )}
                     {camp.subtitle} · {camp.messages.length} msgs · {camp.notes.length} abas de notas
                   </p>
                 </div>

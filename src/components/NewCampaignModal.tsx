@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import type { PlayerAttributes } from '../types/rpg';
+import type { Difficulty, PlayerAttributes } from '../types/rpg';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES } from '../data/difficulty';
 
 interface NewCampaignModalProps {
   open: boolean;
   onClose: () => void;
-  onCreateBlank: (title: string, attributes: PlayerAttributes) => void;
-  onCreateHashidPreset: () => void;
+  onCreateBlank: (title: string, attributes: PlayerAttributes, difficulty: Difficulty) => void;
+  onCreateHashidPreset: (difficulty: Difficulty) => void;
 }
 
 export function NewCampaignModal({
@@ -17,6 +18,7 @@ export function NewCampaignModal({
 }: NewCampaignModalProps) {
   const [mode, setMode] = useState<'blank' | 'hashid'>('blank');
   const [title, setTitle] = useState('');
+  const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY);
   const [attributes, setAttributes] = useState<PlayerAttributes>({
     potencia: 2,
     agilidade: 1,
@@ -29,9 +31,9 @@ export function NewCampaignModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'hashid') {
-      onCreateHashidPreset();
+      onCreateHashidPreset(difficulty);
     } else {
-      onCreateBlank(title.trim() || 'Crônica Inédita', attributes);
+      onCreateBlank(title.trim() || 'Crônica Inédita', attributes, difficulty);
     }
     setTitle('');
     onClose();
@@ -102,6 +104,33 @@ export function NewCampaignModal({
                 Carrega ficha completa, Artox, Borin, Zuri, inventário e missões.
               </div>
             </button>
+          </div>
+
+          <div>
+            <span className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Nível da campanha
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Nível da campanha">
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={difficulty === d.id}
+                  onClick={() => setDifficulty(d.id)}
+                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                    difficulty === d.id
+                      ? `${d.badge} ring-2 ring-amber-500`
+                      : 'border-zinc-200 dark:border-[#2A2E38] text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-500'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+              {DIFFICULTIES.find((d) => d.id === difficulty)?.short} Muda a complexidade da história e o rigor das regras.
+            </p>
           </div>
 
           {mode === 'blank' && (

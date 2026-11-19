@@ -85,11 +85,14 @@ export interface CampaignGuide {
   lastUpdatedAt?: string;
 }
 
+export type Difficulty = 'muito-facil' | 'facil' | 'medio' | 'dificil';
+
 export interface Campaign {
   id: string;
   title: string;
   subtitle: string;
   universe: string;
+  difficulty?: Difficulty;
   createdAt: string;
   updatedAt: string;
   attributes: PlayerAttributes;
