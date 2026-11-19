@@ -25,6 +25,7 @@ import { CampaignsModal } from './components/CampaignsModal';
 import { NewCampaignModal } from './components/NewCampaignModal';
 import { SettingsModal } from './components/SettingsModal';
 import { narrator } from './services/narrator/narrator';
+import { apiUrl } from './utils/api';
 import {
   setBackgroundMusicVolume,
   startBackgroundMusic,
@@ -267,7 +268,7 @@ export default function App() {
     }));
 
     try {
-      const response = await fetch('/api/gm/chat', {
+      const response = await fetch(apiUrl('/api/gm/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
@@ -364,7 +365,7 @@ export default function App() {
     if (recentMessages.length === 0) return;
     setIsSyncingGuide(true);
     try {
-      const response = await fetch('/api/gm/update-guide', {
+      const response = await fetch(apiUrl('/api/gm/update-guide'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
