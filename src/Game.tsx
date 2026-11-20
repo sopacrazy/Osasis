@@ -685,7 +685,7 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
   );
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#F6F6F4] dark:bg-[#111317] text-zinc-900 dark:text-zinc-100">
+    <div className="h-dvh flex flex-col overflow-clip bg-[#F6F6F4] dark:bg-[#111317] text-zinc-900 dark:text-zinc-100">
       {/* Strict 3-Zone Top Bar */}
       <header className="h-14 shrink-0 flex items-center justify-between gap-2 sm:gap-8 px-3.5 sm:px-5 border-b border-zinc-200 dark:border-[#262932] bg-white dark:bg-[#16181D]">
         {/* Zone 1: Single-element Brand Wordmark */}
@@ -777,7 +777,7 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
       </header>
 
       {/* Main Workspace */}
-      <main className="relative flex-1 min-h-0 flex overflow-hidden">
+      <main className="relative flex-1 min-h-0 flex overflow-clip">
         {/* Chat Primary Area (always visible on desktop; active screen on mobile when mobileView === 'chat') */}
         <div
           className={`flex-1 min-w-0 h-full ${

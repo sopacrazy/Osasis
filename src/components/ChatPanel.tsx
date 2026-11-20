@@ -76,12 +76,15 @@ export function ChatPanel({
   onRollRequest,
   onOpenSheet,
 }: ChatPanelProps) {
-  const scrollEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [savedMsgId, setSavedMsgId] = useState<string | null>(null);
 
+  // Rola só a área de mensagens até o fim. (scrollIntoView rolava também a página inteira, que tem
+  // overflow oculto, e deixava a tela deslocada e sem barra para voltar.)
   useEffect(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = scrollAreaRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [campaign.messages.length, isStreaming]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -114,7 +117,7 @@ export function ChatPanel({
   const turnCount = campaign.messages.filter((m) => m.role === 'user' && !m.isTechnicalAdjustment).length;
 
   return (
-    <section className="flex flex-col h-full bg-[#F6F6F4] dark:bg-[#121418] overflow-hidden">
+    <section className="flex flex-col h-full bg-[#F6F6F4] dark:bg-[#121418] overflow-clip">
       {/* Compact Campaign Header */}
       <div className="shrink-0 border-b border-zinc-200 dark:border-[#262932] bg-white dark:bg-[#17191E]">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4 px-4 sm:px-6 py-3">
@@ -156,7 +159,7 @@ export function ChatPanel({
       </div>
 
       {/* Scrollable Narrative Stream (Gemini-style readable column) */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+      <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5">
         <div className="max-w-3xl mx-auto space-y-5 pb-4">
           {campaign.messages.map((msg) => {
             const isUser = msg.role === 'user';
@@ -293,7 +296,6 @@ export function ChatPanel({
             </div>
           )}
 
-          <div ref={scrollEndRef} />
         </div>
       </div>
 
