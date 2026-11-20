@@ -51,7 +51,7 @@ sudo apt install python3.11 python3.11-venv   # se necessário
 ```
 
 Variáveis opcionais (no ambiente antes de iniciar): `TTS_PORT` (8808), `TTS_HOST` (127.0.0.1), `TTS_TOKEN`
-(exige o cabeçalho `X-TTS-Token`), `TTS_CFM_STEPS` (4; mais = mais nítido e mais lento), `TTS_THREADS`,
+(exige o cabeçalho `X-TTS-Token`), `TTS_CFM_STEPS` (10, padrão do modelo; 4 é ~20% mais rápido e menos nítido), `TTS_THREADS`,
 `TTS_DEVICE` (`cpu`/`cuda`), `TTS_MAX_CHARS` (600), `TTS_QUEUE_MAX` (24), `TTS_CACHE_MAX_MB` (500), `TTS_CACHE_DAYS` (14).
 
 Do lado do jogo, no `.env` do servidor Node: `TTS_URL` (padrão `http://127.0.0.1:8808`) e, se usar token, `TTS_TOKEN`.
@@ -96,6 +96,14 @@ Teste objetivo: o áudio gerado do texto da demonstração foi transcrito com Wh
 **92% das palavras coincidiram** com o texto. As diferenças foram o nome inventado "Eldoria" (ouvido como "Aldoria")
 e uma troca em "estava nas mãos". Não há como medir naturalidade/emoção sem ouvir: as amostras estão em
 `samples/` (`demo_completo.wav` é o texto da demonstração com 4 estilos).
+
+## Sotaque brasileiro e expressividade
+
+A voz padrão embutida no modelo pode soar com sotaque de Portugal: o Chatterbox copia o sotaque da **voz de referência**, e a
+padrão não é brasileira. A correção é usar uma referência pt-BR (`voices/NOME.wav`). No Windows dá para gerar uma com a
+voz masculina do sistema (Microsoft Daniel, pt-BR) usando `tools/make_reference_windows.ps1`; o tom médio cai de
+~155–175 Hz para ~135 Hz e a fala continua inteligível (13–17% de palavras diferentes). `cfg_weight=0` com a voz padrão
+foi pior (39%). Uma gravação de pessoa narrando com emoção melhora ainda mais a expressão.
 
 ## Voz do mestre
 

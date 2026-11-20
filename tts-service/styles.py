@@ -30,7 +30,7 @@ class Style:
 #   exaggeration ↑ = fala mais rápida, mais aguda e mais forte; ↓ = mais lenta e suave.
 #   cfg_weight   ↓ = fala bem mais lenta, com pausas, mais forte e com mais variação de tom; ↑ = mais firme e rápida.
 STYLES: dict[str, Style] = {
-    "normal":   Style("Normal",   0.50, 0.50, 0.80, 0.20),  # padrão recomendado pelo projeto
+    "normal":   Style("Normal",   0.70, 0.30, 0.80, 0.20),  # escolhido de ouvido (amostra expr_3): mais expressivo que o 0,5/0,5 neutro
     "suspense": Style("Suspense", 0.40, 0.25, 0.75, 0.45),  # lento, com pausas e variação de tom
     "combate":  Style("Combate",  0.85, 0.45, 0.85, 0.12),  # rápido, agudo e forte
     "terror":   Style("Terror",   0.30, 0.25, 0.75, 0.55),  # lento, contido, pausas longas

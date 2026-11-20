@@ -39,7 +39,7 @@ HERE = Path(__file__).resolve().parent
 CACHE_DIR = Path(os.getenv("TTS_CACHE_DIR", HERE / "cache"))
 MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "600"))
 QUEUE_MAX = int(os.getenv("TTS_QUEUE_MAX", "24"))
-CFM_STEPS = int(os.getenv("TTS_CFM_STEPS", "4"))  # passos do decodificador: menos = mais rápido, um pouco menos nítido
+CFM_STEPS = int(os.getenv("TTS_CFM_STEPS", "10"))  # passos do decodificador (padrão do modelo): menos = mais rápido, menos nítido
 CACHE_MAX_MB = int(os.getenv("TTS_CACHE_MAX_MB", "500"))
 CACHE_DAYS = int(os.getenv("TTS_CACHE_DAYS", "14"))
 TOKEN = os.getenv("TTS_TOKEN", "")

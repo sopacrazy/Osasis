@@ -113,8 +113,10 @@ class Engine:
         if not wav.exists():
             raise KeyError(f"Voz '{voice}' não encontrada")
         assert self.model is not None
-        self.model.prepare_conditionals(str(wav), exaggeration=exaggeration)
-        self._voices[voice] = copy.deepcopy(self.model.conds)
+        with torch.no_grad():
+            self.model.prepare_conditionals(str(wav), exaggeration=exaggeration)
+        # prepare_conditionals cria um objeto novo a cada chamada: guardamos a referência (sem deepcopy)
+        self._voices[voice] = self.model.conds
         return self._voices[voice]
 
     # ------------------------------------------------------------------ geração
