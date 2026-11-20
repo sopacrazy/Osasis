@@ -1,5 +1,6 @@
 import { Loader2, Pause, Play, Repeat, Square, Volume2, VolumeX, WifiOff } from 'lucide-react';
 import { useNarrator } from '../services/narrator/useNarrator';
+import { STYLE_LABELS } from '../services/narrator/style';
 
 const btn =
   'w-8 h-8 rounded-md border flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
@@ -9,7 +10,7 @@ const idle =
 /** Controles rápidos do narrador (cabeçalho do chat). A configuração completa fica em Configurações. */
 export function NarratorControls() {
   const { state, narrator } = useNarrator();
-  const { settings, generating, playing, paused, usingFallback, notice, hasLast } = state;
+  const { settings, generating, playing, paused, usingFallback, notice, hasLast, progress, etaSeconds, currentStyle } = state;
   const textOnly = settings.mode === 'text';
   const offline = settings.mode === 'offline' || usingFallback;
 
@@ -82,21 +83,25 @@ export function NarratorControls() {
         {settings.enabled && generating && (
           <span className="inline-flex items-center gap-1 pl-1 pr-1.5 text-[11px] text-amber-800 dark:text-amber-300 whitespace-nowrap">
             <Loader2 className="w-3 h-3 animate-spin" />
-            <span className="hidden sm:inline">Gerando voz…</span>
+            <span className="hidden sm:inline">
+              Gerando voz
+              {progress ? ` ${progress.ready}/${progress.total}` : ''}
+              {etaSeconds ? ` · ~${Math.max(1, Math.round(etaSeconds))}s` : '…'}
+            </span>
           </span>
         )}
         {settings.enabled && !generating && playing && !paused && (
           <span className="pl-1 pr-1.5 text-[11px] text-amber-800 dark:text-amber-300 whitespace-nowrap hidden sm:inline">
-            Narrando
+            Narrando{currentStyle ? ` · ${STYLE_LABELS[currentStyle]}` : ''}
           </span>
         )}
         {settings.enabled && offline && !textOnly && (
           <span
-            title="Narrador offline (voz do navegador, sem custo)"
+            title="Voz do navegador (sem custo, sem o serviço Chatterbox)"
             className="inline-flex items-center gap-1 px-1.5 text-[11px] text-zinc-600 dark:text-zinc-300 whitespace-nowrap"
           >
             <WifiOff className="w-3 h-3" />
-            <span className="hidden sm:inline">Offline</span>
+            <span className="hidden sm:inline">Navegador</span>
           </span>
         )}
       </div>

@@ -1,0 +1,7 @@
+# Serviço de narração (Chatterbox pt-BR). Use Python 3.11 (versão testada pelo projeto).
+chatterbox-tts==0.1.7
+fastapi>=0.110
+uvicorn>=0.29
+soundfile>=0.12
+huggingface_hub>=0.24
+pydantic>=2

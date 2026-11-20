@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { Cloud, Loader2, Play, ScrollText, Square, WifiOff } from 'lucide-react';
+import { Cloud, Cpu, Loader2, Play, RefreshCw, ScrollText, Square, WifiOff } from 'lucide-react';
 import type { NarratorMode } from '../services/narrator/narrator';
+import { STYLE_LABELS, type NarrationStyle } from '../services/narrator/style';
 import { useNarrator } from '../services/narrator/useNarrator';
 
 const MODES: { id: NarratorMode; title: string; desc: string; icon: typeof Cloud }[] = [
   {
-    id: 'elevenlabs',
-    title: 'ElevenLabs — Narrador Cinematográfico',
-    desc: 'Voz realista e expressiva (Flash v2.5). Exige internet e créditos.',
+    id: 'chatterbox',
+    title: 'Chatterbox — Voz expressiva local',
+    desc: 'Voz natural com entonação, gerada no seu computador. Grátis, sem enviar texto a terceiros.',
     icon: Cloud,
   },
   {
     id: 'offline',
-    title: 'Narrador Offline',
-    desc: 'Voz pt-BR do próprio navegador/sistema. Sem internet e sem custo.',
+    title: 'Narrador do navegador',
+    desc: 'Voz pt-BR do navegador/sistema. Instantânea, sem internet e sem custo.',
     icon: WifiOff,
   },
   {
@@ -26,31 +26,22 @@ const MODES: { id: NarratorMode; title: string; desc: string; icon: typeof Cloud
 
 export function NarratorSettings() {
   const { state, narrator } = useNarrator();
-  const { settings, eleven, offlineAvailable, offlineVoiceName, offlineIsLocal, generating, playing } = state;
-  const [voices, setVoices] = useState<{ voiceId: string; name: string; labels: Record<string, string> }[]>([]);
-  const [loadingVoices, setLoadingVoices] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-
-  const loadVoices = async () => {
-    setLoadingVoices(true);
-    setVoiceError(null);
-    try {
-      setVoices(await narrator.listElevenVoices());
-    } catch (e) {
-      setVoiceError(e instanceof Error ? e.message : 'Não foi possível listar as vozes.');
-    } finally {
-      setLoadingVoices(false);
-    }
-  };
-
-  const used = eleven?.usage.estimatedCredits ?? 0;
-  const budget = eleven?.usage.monthlyCreditBudget ?? 0;
-  const pct = budget > 0 ? Math.min(100, Math.round((used / budget) * 100)) : 0;
+  const { settings, tts, offlineAvailable, offlineVoiceName, offlineIsLocal, generating, playing, progress, etaSeconds } =
+    state;
   const offlineVoices = narrator.getOfflineVoices();
   const card =
     'rounded-lg border border-zinc-200 dark:border-[#2A2E38] bg-zinc-50/70 dark:bg-[#1C1F26] p-4 space-y-3';
   const select =
     'w-full rounded-md border border-zinc-200 dark:border-[#2C303A] bg-white dark:bg-[#14161B] px-2.5 py-1.5 text-xs';
+
+  const ttsLine = (() => {
+    if (tts === null || !tts.reachable)
+      return { tone: 'warn', text: 'Serviço de voz não encontrado. Inicie o tts-service (veja NARRADOR.md). Enquanto isso o jogo usa a voz do navegador.' };
+    if (tts.error) return { tone: 'bad', text: `O serviço está no ar, mas o modelo falhou: ${tts.error}` };
+    if (tts.loading || !tts.ready) return { tone: 'warn', text: 'Serviço conectado. Carregando o modelo de voz (leva alguns segundos)…' };
+    return { tone: 'ok', text: `Conectado · ${tts.device === 'cuda' ? 'placa de vídeo (GPU)' : 'processador (CPU)'}` };
+  })();
+  const slow = tts?.ready && (tts.rtf ?? (tts.device === 'cpu' ? 4 : 0)) > 1.15;
 
   return (
     <div className={card}>
@@ -84,81 +75,82 @@ export function NarratorSettings() {
         ))}
       </div>
 
-      {settings.mode === 'elevenlabs' && (
-        <div className="space-y-2 rounded-md border border-zinc-200 dark:border-[#2C303A] p-3">
-          {eleven === null && (
-            <p className="text-[11px] text-amber-700 dark:text-amber-400">
-              Servidor de voz inacessível. A narração usará o modo offline, se disponível.
+      {settings.mode === 'chatterbox' && (
+        <div className="space-y-2.5 rounded-md border border-zinc-200 dark:border-[#2C303A] p-3">
+          <div className="flex items-start justify-between gap-2">
+            <p
+              className={`text-[11px] ${
+                ttsLine.tone === 'ok'
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : ttsLine.tone === 'bad'
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-amber-700 dark:text-amber-400'
+              }`}
+            >
+              {ttsLine.text}
             </p>
-          )}
-          {eleven && !eleven.configured && (
-            <p className="text-[11px] text-amber-700 dark:text-amber-400">
-              ELEVENLABS_API_KEY não está configurada no .env do servidor. A narração usará o modo offline.
+            <button
+              type="button"
+              onClick={() => void narrator.refreshStatus()}
+              title="Atualizar estado do serviço"
+              aria-label="Atualizar estado do serviço"
+              className="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {tts?.ready && (
+            <p className="flex items-start gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+              <Cpu className="w-3.5 h-3.5 shrink-0 mt-px" />
+              {tts.rtf !== null
+                ? `Velocidade medida: ${tts.rtf.toLocaleString('pt-BR')}× o tempo da fala. `
+                : 'Velocidade ainda não medida (depende da primeira narração). '}
+              {slow
+                ? 'Neste computador a voz demora para ficar pronta: o texto aparece na hora e a narração toca quando todos os trechos forem gerados. Os áudios ficam guardados e repetir é instantâneo.'
+                : 'Geração mais rápida que a fala: a narração toca enquanto é gerada.'}
             </p>
           )}
 
-          <label className="block text-[11px] text-zinc-500 dark:text-zinc-400">
-            Voz do narrador
-            {settings.voiceName && (
-              <span className="ml-1 font-semibold text-zinc-700 dark:text-zinc-200">({settings.voiceName})</span>
-            )}
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={loadVoices}
-              disabled={loadingVoices || !eleven?.configured}
-              className="px-2.5 py-1.5 rounded-md border border-zinc-300 dark:border-[#343946] text-xs font-medium hover:bg-zinc-100 dark:hover:bg-[#22252D] disabled:opacity-40 whitespace-nowrap cursor-pointer"
-            >
-              {loadingVoices ? 'Carregando…' : 'Listar vozes da conta'}
-            </button>
-            {voices.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-[11px] text-zinc-500 dark:text-zinc-400">
+              Voz do narrador
               <select
-                className={select}
-                value={settings.voiceId}
-                onChange={(e) => {
-                  const v = voices.find((x) => x.voiceId === e.target.value);
-                  narrator.updateSettings({ voiceId: e.target.value, voiceName: v?.name ?? '' });
-                }}
+                className={`${select} mt-1`}
+                value={settings.voice}
+                onChange={(e) => narrator.updateSettings({ voice: e.target.value })}
               >
-                <option value="">Padrão do servidor (.env)</option>
-                {voices.map((v) => (
-                  <option key={v.voiceId} value={v.voiceId}>
-                    {v.name}
-                    {v.labels.gender ? ` · ${v.labels.gender}` : ''}
-                    {v.labels.age ? ` · ${v.labels.age}` : ''}
+                {(tts?.voices?.length ? tts.voices : ['padrao']).map((v) => (
+                  <option key={v} value={v}>
+                    {v === 'padrao' ? 'Padrão do modelo' : v}
                   </option>
                 ))}
               </select>
-            )}
+            </label>
+            <label className="block text-[11px] text-zinc-500 dark:text-zinc-400">
+              Estilo
+              <select
+                className={`${select} mt-1`}
+                value={settings.autoStyle ? 'auto' : settings.style}
+                onChange={(e) =>
+                  e.target.value === 'auto'
+                    ? narrator.updateSettings({ autoStyle: true })
+                    : narrator.updateSettings({ autoStyle: false, style: e.target.value as NarrationStyle })
+                }
+              >
+                <option value="auto">Automático (pela cena)</option>
+                {(Object.keys(STYLE_LABELS) as NarrationStyle[]).map((k) => (
+                  <option key={k} value={k}>
+                    {STYLE_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          <input
-            type="text"
-            value={settings.voiceId}
-            onChange={(e) => narrator.updateSettings({ voiceId: e.target.value.trim(), voiceName: '' })}
-            placeholder="voice_id (vazio = ELEVENLABS_VOICE_ID do .env)"
-            className={select}
-            aria-label="voice_id da ElevenLabs"
-          />
-          {voiceError && <p className="text-[11px] text-rose-600 dark:text-rose-400">{voiceError}</p>}
-
-          {eleven && eleven.configured && (
-            <div className="space-y-1 pt-1">
-              <div className="flex justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-                <span>Consumo estimado neste mês ({eleven.usage.month})</span>
-                <span className="font-mono-tabular">
-                  ~{used.toLocaleString('pt-BR')} / {budget.toLocaleString('pt-BR')} créditos
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-[#2A2E38] overflow-hidden">
-                <div className="h-full bg-amber-600" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                Estimativa local calculada pelo jogo (caracteres × créditos por caractere). Não é o saldo oficial da
-                ElevenLabs: consulte o painel deles para o saldo real. Áudios em cache não consomem créditos.
-              </p>
-            </div>
-          )}
+          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+            No modo automático o jogo escolhe suspense, combate, terror, tristeza, épico ou diálogo conforme o trecho.
+            A voz fica a mesma durante toda a campanha.
+          </p>
         </div>
       )}
 
@@ -170,7 +162,7 @@ export function NarratorSettings() {
                 className={select}
                 value={settings.offlineVoiceURI}
                 onChange={(e) => narrator.updateSettings({ offlineVoiceURI: e.target.value })}
-                aria-label="Voz offline"
+                aria-label="Voz do navegador"
               >
                 <option value="">Automática ({offlineVoiceName})</option>
                 {offlineVoices.map((v) => (
@@ -213,7 +205,8 @@ export function NarratorSettings() {
               className="w-full accent-amber-600 cursor-pointer"
             />
             <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-              O que passar do limite continua escrito, mas não é narrado. Sugestão: 200–400.
+              O que passar do limite continua escrito, mas não é narrado. Com voz local lenta, valores menores ficam
+              prontos mais rápido.
             </p>
           </div>
 
@@ -261,6 +254,12 @@ export function NarratorSettings() {
             )}
             {playing || generating ? 'Parar' : 'Testar voz'}
           </button>
+          {generating && (
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              Gerando a voz{progress ? ` (${progress.ready}/${progress.total} trechos)` : ''}
+              {etaSeconds ? ` · cerca de ${Math.max(1, Math.round(etaSeconds))} s` : ''}…
+            </p>
+          )}
           {state.notice && <p className="text-[11px] text-amber-700 dark:text-amber-400">{state.notice}</p>}
         </>
       )}
