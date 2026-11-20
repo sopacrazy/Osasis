@@ -4,7 +4,7 @@ import { GoogleGenAI, ThinkingLevel, Type, type Content } from '@google/genai';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
-import { registerTtsRoutes } from './tts.ts';
+import { registerNarrationRoutes } from './narration.ts';
 import { createStore } from './store.ts';
 import { registerAuthRoutes, requireAuth } from './auth.ts';
 
@@ -19,9 +19,9 @@ const store = await createStore();
 console.log('Armazenamento:', store.kind === 'mysql' ? 'MariaDB' : 'arquivos locais (./data)');
 await registerAuthRoutes(app, store);
 // Mestre e narração só para quem está logado.
-app.use(['/api/gm', '/api/tts'], requireAuth);
+app.use(['/api/gm', '/api/narracao'], requireAuth);
 
-registerTtsRoutes(app);
+registerNarrationRoutes(app);
 
 const PORT = Number(process.env.PORT) || 3000;
 

@@ -51,8 +51,6 @@ export function takeCompleteSentences(text: string, from: number): { sentences: 
   let newline = rest.indexOf('\n');
   while ((m = SENTENCE_END.exec(rest))) {
     const end = m.index + m[0].length;
-    // não corta um diálogo no meio: fim de frase dentro de aspas abertas não é fronteira
-    if (insideQuote(text, from + end)) continue;
     while (newline !== -1 && newline < end && newline >= last) {
       cut(newline);
       newline = rest.indexOf('\n', newline + 1);
@@ -67,39 +65,14 @@ export function takeCompleteSentences(text: string, from: number): { sentences: 
   return { sentences, next: from + last };
 }
 
-/** A posição `pos` do texto está dentro de aspas abertas (diálogo)? */
-export function insideQuote(text: string, pos: number): boolean {
-  let open = false;
-  for (let k = 0; k < pos && k < text.length; k++) {
-    const ch = text[k];
-    if (ch === '"') open = !open;
-    else if (ch === '“' || ch === '«') open = true;
-    else if (ch === '”' || ch === '»') open = false;
-  }
-  return open;
-}
-
-/** Último ponto de quebra natural até `max` que não caia dentro de um diálogo. */
-function safeBreak(s: string, max: number): number {
-  const candidates = [', ', '; ', ': ', ' '];
-  for (const sep of candidates) {
-    let i = s.lastIndexOf(sep, max);
-    while (i > max * 0.3) {
-      if (!insideQuote(s, i)) return i;
-      i = s.lastIndexOf(sep, i - 1);
-    }
-  }
-  return -1;
-}
-
-/** Quebra frases muito longas (acima do limite por requisição) em pedaços menores, sem cortar diálogos. */
+/** Quebra frases muito longas (acima do limite por requisição) em pedaços menores. */
 export function splitLong(sentence: string, max = MAX_CHUNK_CHARS): string[] {
   if (sentence.length <= max) return [sentence];
   const out: string[] = [];
   let s = sentence;
   while (s.length > max) {
-    let i = safeBreak(s, max);
-    if (i < 0) i = s.lastIndexOf(' ', max); // sem saída: o diálogo é maior que o limite
+    let i = Math.max(s.lastIndexOf(', ', max), s.lastIndexOf('; ', max), s.lastIndexOf(': ', max));
+    if (i < max * 0.4) i = s.lastIndexOf(' ', max);
     if (i <= 0) i = max;
     out.push(s.slice(0, i + 1).trim());
     s = s.slice(i + 1).trim();

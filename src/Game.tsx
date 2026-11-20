@@ -32,7 +32,6 @@ import { CharacterSheetModal } from './components/CharacterSheetModal';
 import { formatSheetForChat, sheetToNotes } from './utils/characterSheet';
 import { SettingsModal } from './components/SettingsModal';
 import { narrator } from './services/narrator/narrator';
-import { detectCombat } from './services/narrator/style';
 import { apiFetch } from './utils/api';
 import { difficultyPrompt } from './data/difficulty';
 import { buildCampaignMemory } from './utils/campaignMemory';
@@ -263,10 +262,7 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
     } else {
       // primeira resposta após a ficha = prólogo da campanha (narração mais longa, como a abertura de um livro)
       const lastUser = [...campaignSnapshot.messages].reverse().find((m) => m.role === 'user');
-      narrator.begin(false, {
-        minChars: lastUser?.sheetAnswerTo ? 1100 : undefined,
-        context: { inCombat: detectCombat(campaignSnapshot.messages) },
-      });
+      narrator.begin(false, lastUser?.sheetAnswerTo ? { minChars: 1100 } : undefined);
     }
 
     const modelMessageId = `msg-gm-${Date.now()}`;
