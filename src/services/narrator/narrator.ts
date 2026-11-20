@@ -238,7 +238,7 @@ export class NarratorService {
 
   // ---- API pública de narração ------------------------------------------------
   /** Chamar no início de uma resposta do mestre (antes do primeiro trecho). */
-  begin(force = false) {
+  begin(force = false, opts?: { minChars?: number }) {
     this.stop();
     if (!force && !this.state.settings.enabled) return;
     const { engine, fallback, notice } = this.resolveEngine();
@@ -251,7 +251,8 @@ export class NarratorService {
       queue: [],
       consumed: 0,
       pending: '',
-      budgetLeft: this.state.settings.maxChars,
+      // o prólogo da campanha pode ter um limite maior que o das narrações comuns
+      budgetLeft: Math.max(this.state.settings.maxChars, opts?.minChars ?? 0),
       exhausted: false,
       gateOpen: !this.state.settings.onlyImportant,
       finished: false,

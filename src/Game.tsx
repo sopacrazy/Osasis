@@ -260,7 +260,9 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
     if (lastUserText.toLowerCase().startsWith('ajuste técnico:')) {
       narrator.stop();
     } else {
-      narrator.begin();
+      // primeira resposta após a ficha = prólogo da campanha (narração mais longa, como a abertura de um livro)
+      const lastUser = [...campaignSnapshot.messages].reverse().find((m) => m.role === 'user');
+      narrator.begin(false, lastUser?.sheetAnswerTo ? { minChars: 1100 } : undefined);
     }
 
     const modelMessageId = `msg-gm-${Date.now()}`;
@@ -505,6 +507,13 @@ export default function Game({ user, initialCampaigns, initialOnServer, onLogout
         ...camp,
         attributes: sheet.attributes,
         character: sheet,
+        // os itens da ficha viram o inventário registrado (fonte de verdade desde o 1º turno)
+        guide: {
+          ...(camp.guide ?? EMPTY_GUIDE),
+          inventory: sheet.equipment
+            .filter((e) => e.trim())
+            .map((e) => ({ name: e.trim(), description: 'Item inicial da ficha', status: 'com o personagem', quantity: 1 })),
+        },
         notes: camp.notes.map((n) =>
           n.id === 'tab-ficha'
             ? { ...n, content: notes.ficha }

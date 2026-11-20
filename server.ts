@@ -463,6 +463,11 @@ app.post('/api/gm/character-suggest', async (req: Request, res: Response) => {
   const prompt = `Você é o Mestre de uma campanha de RPG solo em Português (BR) e vai sugerir a FICHA INICIAL do personagem do jogador.
 Use o universo, o estilo e as raças/classes que aparecem na conversa abaixo. Se o Mestre já listou raças e classes, ESCOLHA UMA RAÇA E UMA CLASSE dentre as listadas, com os nomes exatos. Se nada foi listado, crie opções coerentes com o estilo do universo.
 
+PRIORIDADE: REAPROVEITE O QUE JÁ EXISTE NA CONVERSA e fique ESTRITAMENTE NO TEMA.
+- Se o Mestre descreveu a classe escolhida (equipamento inicial, perícias e habilidade) ou a raça (traços e fraqueza), COPIE esses dados exatamente — mesmos nomes de perícias, mesma habilidade, mesmos itens — em vez de inventar outros. Só crie o que NÃO aparece na conversa.
+- Tudo (nome, origem, itens, habilidade, companheiro) deve pertencer ao gênero e ao mundo descritos. Nada de elementos de outro gênero (ex.: sem magia em ficção científica, sem armas de fogo em fantasia medieval), a menos que o próprio universo os tenha. Em dúvida, prefira o mais clássico do tema.
+- A origem deve citar algo do universo mencionado na conversa (lugar, facção, evento, criatura).
+
 Regras da ficha:
 - name: nome criativo e coerente com o universo e a raça.
 - race e className: nomes curtos.
