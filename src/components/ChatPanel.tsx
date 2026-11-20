@@ -20,6 +20,8 @@ import { NarratorControls } from './NarratorControls';
 import { getDifficulty } from '../data/difficulty';
 import { RollRequestCard } from './RollRequestCard';
 import { SheetRequestCard } from './SheetRequestCard';
+import { StateBlockCard } from './StateBlockCard';
+import { splitStateBlock } from '../utils/stateBlock';
 import { hasSheetRequest, parseRollRequest, stripRollTags, type PendingRoll } from '../utils/rollRequest';
 import { narrator } from '../services/narrator/narrator';
 
@@ -234,7 +236,7 @@ export function ChatPanel({
                   style={{ fontSize: `${chatFontSize}px` }}
                   className="gm-prose text-zinc-800 dark:text-zinc-200"
                 >
-                  <ReactMarkdown>{stripRollTags(msg.text) || '...'}</ReactMarkdown>
+                  <ReactMarkdown>{splitStateBlock(stripRollTags(msg.text)).narrative || '...'}</ReactMarkdown>
                 </div>
                 {(() => {
                   const request = parseRollRequest(msg.text);
@@ -259,6 +261,10 @@ export function ChatPanel({
                     onOpen={onOpenSheet}
                   />
                 )}
+                {(() => {
+                  const { items } = splitStateBlock(stripRollTags(msg.text));
+                  return items ? <StateBlockCard items={items} /> : null;
+                })()}
               </article>
             );
           })}
