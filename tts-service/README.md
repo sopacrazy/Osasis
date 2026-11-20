@@ -18,7 +18,7 @@ terceiros, sem ElevenLabs nem APIs pagas). O jogo (Node) fala com ele por HTTP.
 | Item | Valor |
 |---|---|
 | Python | 3.11 (versão testada pelo projeto; o 3.13 não é suportado pelas dependências fixadas) |
-| Disco | ~3,3 GB de modelos + ~3 GB do ambiente Python |
+| Disco | ~3,3 GB de modelos (3,0 GB em disco) + ~2,4 GB do ambiente Python (≈ 5,5 GB no total) |
 | **Memória (CPU)** | **~4,3 GB de RAM em uso** (≈6 GB comprometidos) |
 | Carga do modelo | 10 a 16 s |
 | GPU | usa CUDA automaticamente se existir (`TTS_DEVICE=cuda`). **Não foi possível medir aqui** (o PC de testes tem Radeon, sem CUDA) |
